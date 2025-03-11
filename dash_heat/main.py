@@ -50,7 +50,7 @@ app.index_string = """
             .container {
                 max-width: 1200px;
                 margin: 0 auto;
-                padding: 0 20px;
+                padding: 0 10px;
             }
             .dropdown-container {
                 margin: 30px 0;
@@ -59,7 +59,7 @@ app.index_string = """
             .chart-container {
                 background-color: #fffdf5;
                 border-radius: 8px;
-                padding: 30px;
+                padding: 10px;
                 margin-top: 20px;
                 box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
                 overflow-x: auto;
@@ -68,6 +68,14 @@ app.index_string = """
             .scrollable-container {
                 overflow-x: auto;
                 width: 100%;
+            }
+            /* Custom styling for heatmap cells */
+            .js-plotly-plot .heatmap .textpoint {
+                font-size: 11px !important;
+            }
+            /* Reduce the height of heatmap cells */
+            .js-plotly-plot .heatmap .point {
+                transform: scale(1, 0.85);
             }
             .legend {
                 display: flex;
@@ -215,7 +223,7 @@ def create_heatmap(view_type="daily"):
             zmid=0,  # Set the midpoint of the color scale to 0
             text=[[f"{val}%" for val in row] for row in z_data],
             texttemplate="%{text}",
-            textfont={"size": 12, "color": "black"},
+            textfont={"size": 11, "color": "black"},  # Reduced font size
             hoverinfo="text",
             hovertext=[
                 [f"{regions[i]}, {x_labels[j]}: {val}%" for j, val in enumerate(row)]
@@ -231,28 +239,46 @@ def create_heatmap(view_type="daily"):
         1200, len(x_labels) * column_width
     )  # Ensure minimum width of 1200px
 
+    # Calculate a more compact height based on number of rows
+    row_height = 30  # Reduced height per row in pixels
+    total_height = max(350, len(regions) * row_height + 80)  # Reduced padding
+
     # Update layout
     fig.update_layout(
         paper_bgcolor="#fffdf5",
         plot_bgcolor="#fffdf5",
-        margin={"l": 50, "r": 30, "t": 50, "b": 50},
+        margin={"l": 10, "r": 30, "t": 50, "b": 20},  # Further reduced bottom margin
         xaxis={
             "side": "top",
             "title": {
                 "text": "MONTH/DAY",
-                "font": {"size": 14, "color": "#333", "family": "Helvetica Neue"},
+                "font": {
+                    "size": 14,
+                    "color": "#333",
+                    "family": "Helvetica Neue",
+                    "weight": "bold",
+                },
             },
-            "tickfont": {"size": 12, "color": "#333"},
+            "tickfont": {
+                "size": 12,
+                "color": "#333",
+                "weight": "bold",
+            },
             "tickangle": 0,
             "constrain": "domain",  # Ensure x-axis is not compressed
         },
         yaxis={
             "title": "",
-            "tickfont": {"size": 12, "color": "#333"},
+            "tickfont": {
+                "size": 11,
+                "color": "#333",
+                "weight": "bold",
+            },  # Reduced font size
             "autorange": "reversed",  # Reverse the y-axis to match the image
             "scaleanchor": False,  # Prevent y-axis from scaling with x-axis
+            "ticklen": 2,  # Shorter tick marks
         },
-        height=600,
+        height=total_height,  # Dynamic height based on number of rows
         width=total_width,
     )
 
@@ -343,7 +369,7 @@ app.layout = html.Div(
                                 figure=create_heatmap("daily"),
                                 config={"displayModeBar": False},
                                 style={
-                                    "height": "600px",
+                                    "height": "auto",  # Changed from fixed height to auto
                                     "minWidth": "100%",
                                 },
                             ),
