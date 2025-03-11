@@ -17,7 +17,7 @@ app = dash.Dash(
     meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}],
 )
 
-# Custom CSS for OpenTable-like styling
+# Custom CSS for ExampleDash-like styling
 app.index_string = """
 <!DOCTYPE html>
 <html>
@@ -103,8 +103,8 @@ app.index_string = """
         {%app_entry%}
         <footer class="footer">
             <div class="container">
-                <p>© 2025 OpenTable, Inc. All rights reserved.</p>
-                <p>Data provided by OpenTable. Cite and link back if used.</p>
+                <p>© 2025 ExampleDash, Inc. All rights reserved.</p>
+                <p>Data provided by ExampleDash. Cite and link back if used.</p>
             </div>
         </footer>
         {%config%}
@@ -139,7 +139,7 @@ plot_df["Date"] = pd.to_datetime(plot_df["Date"], format="%m/%d/%Y")
 plot_df = plot_df.sort_values("Date")
 
 
-# Function to create the figure with OpenTable styling
+# Function to create the figure with ExampleDash styling
 def create_figure(data):
     # Filter to just show Global data initially
     filtered_data = data[data["Region"] == "Global"]
@@ -215,7 +215,7 @@ app.layout = html.Div(
                 html.Div(
                     [
                         html.Img(
-                            src="https://www.opentable.com/img/OpenTable-logo.svg",
+                            src="https://www.ExampleDash.com/img/ExampleDash-logo.svg",
                             style={
                                 "width": "150px",
                                 "margin": "0 auto",
