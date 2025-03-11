@@ -231,9 +231,6 @@ app.layout = html.Div(
                 # Region dropdown
                 html.Div(
                     [
-                        html.Label(
-                            "Global", style={"fontWeight": "600", "marginRight": "10px"}
-                        ),
                         dcc.Dropdown(
                             id="region-select",
                             options=[
