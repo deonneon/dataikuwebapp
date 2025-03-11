@@ -3,194 +3,381 @@ import dash
 from dash import dcc, html, dash_table
 from dash.dependencies import Input, Output
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime
 
-# Initialize Dash app
-app = dash.Dash(__name__)
+# Initialize Dash app with custom styles
+app = dash.Dash(
+    __name__,
+    meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}],
+)
 
-# Load dataset
-# dataset = dataiku.Dataset("seated_diners_2025_vs_2024")
-# df = dataset.get_dataframe()
-df = pd.read_csv("dash/data.csv")
+# Custom CSS for OpenTable-like styling
+app.index_string = """
+<!DOCTYPE html>
+<html>
+    <head>
+        {%metas%}
+        <title>State of the Restaurant Industry</title>
+        {%favicon%}
+        {%css%}
+        <style>
+            body {
+                font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+                margin: 0;
+                padding: 0;
+                background-color: #fff;
+                color: #333;
+                line-height: 1.5;
+            }
+            .header {
+                text-align: left;
+                padding: 40px 20px;
+                border-bottom: 1px solid #eaeaea;
+            }
+            .header h1 {
+                font-size: 2.5em;
+                color: #333;
+                margin-bottom: 10px;
+                font-weight: 600;
+            }
+            .header p {
+                font-size: 0.9em;
+                color: #555;
+                max-width: 800px;
+                margin: 0 auto;
+            }
+            .container {
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 0 20px;
+            }
+            .dropdown-container {
+                margin: 30px 0;
+                text-align: left;
+            }
+            .chart-container {
+                background-color: #fffdf5;
+                border-radius: 8px;
+                padding: 30px;
+                margin-top: 20px;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            }
+            .legend {
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+                margin-bottom: 15px;
+            }
+            .legend-item {
+                display: flex;
+                align-items: center;
+                margin-left: 20px;
+            }
+            .legend-color {
+                width: 30px;
+                height: 4px;
+                margin-right: 8px;
+            }
+            .legend-label {
+                font-size: 0.9em;
+                color: #555;
+            }
+            .footer {
+                text-align: center;
+                margin-top: 60px;
+                padding: 30px 0;
+                font-size: 0.9em;
+                color: #777;
+                border-top: 1px solid #eaeaea;
+            }
+            .dash-table-container {
+                margin-top: 20px;
+                border-radius: 8px;
+                overflow: hidden;
+            }
+            .dash-spreadsheet-container {
+                border-radius: 8px;
+                overflow: hidden;
+                font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            }
+            .dash-spreadsheet-inner th {
+                background-color: #fffdf5 !important;
+                color: #333 !important;
+                font-weight: 600 !important;
+                border-bottom: 2px solid #eaeaea !important;
+                text-align: center !important;
+            }
+            .dash-spreadsheet-inner td {
+                background-color: #fffdf5 !important;
+                color: #333 !important;
+                border-bottom: 1px solid #eaeaea !important;
+                text-align: center !important;
+            }
+            .dash-cell-value {
+                text-align: center !important;
+            }
+        </style>
+        {%scripts%}
+    </head>
+    <body>
+        {%app_entry%}
+        <footer class="footer">
+            <div class="container">
+                <p>© 2025 OpenTable, Inc. All rights reserved.</p>
+                <p>Data provided by OpenTable. Cite and link back if used.</p>
+            </div>
+        </footer>
+        {%config%}
+        {%scripts%}
+        {%renderer%}
+    </body>
+</html>
+"""
+
+# Load data from CSV with the first row as header
+df = pd.read_csv("data.csv", header=0)
+
+# Prepare data for table and graph
+dates = df.columns[1:]  # Exclude region column
+regions = df.iloc[:, 0].tolist()  # First column as regions
+
+# Add the current year to the date columns for proper parsing
+current_year = datetime.now().year
+df.columns = ["Region"] + [f"{d}/{current_year}" for d in dates]
+
+# Convert to long format for plotting
+plot_df = df.copy()
+plot_df = plot_df.melt(id_vars=["Region"], var_name="Date", value_name="Change")
+
+# Clean the "Change" column to ensure it contains numeric values
+plot_df["Change"] = plot_df["Change"].str.replace("%", "", regex=False).astype(float)
+
+# Convert dates to datetime objects for proper sorting
+plot_df["Date"] = pd.to_datetime(plot_df["Date"], format="%m/%d/%Y")
+
+# Sort by date to ensure chronological order
+plot_df = plot_df.sort_values("Date")
 
 
-# Helper functions
-def aggregate_weekly(df):
-    date_cols = [col for col in df.columns if col != "Region"]
-    weekly_data = {}
-    for region in df["Region"]:
-        weekly_data[region] = []
-        region_row = df[df["Region"] == region].iloc[0]
-        week_start = datetime(2025, 1, 1)
-        week_values = []
-        for date in date_cols:
-            current_date = datetime.strptime(f"2025-{date}", "%Y-%m/%d")
-            if current_date < week_start + timedelta(days=7):
-                # Clean the percentage value
-                value = region_row[date]
-                if isinstance(value, str):
-                    value = value.replace("%", "")
-                week_values.append(float(value))
-            else:
-                weekly_data[region].append(
-                    round(sum(week_values) / len(week_values), 1)
-                )
-                # Clean the percentage value
-                value = region_row[date]
-                if isinstance(value, str):
-                    value = value.replace("%", "")
-                week_values = [float(value)]
-                week_start += timedelta(days=7)
-        if week_values:
-            weekly_data[region].append(round(sum(week_values) / len(week_values), 1))
-    return weekly_data
+# Function to create the figure with OpenTable styling
+def create_figure(data, selected_region):
+    # Filter data for the selected region
+    filtered_data = data[data["Region"] == selected_region]
 
+    # Create a custom figure
+    figure = {
+        "data": [
+            {
+                "x": filtered_data["Date"],
+                "y": filtered_data["Change"],
+                "type": "scatter",
+                "mode": "lines+markers",
+                "name": selected_region,
+                "line": {
+                    "color": [
+                        "#2ecc71" if val >= 0 else "#e74c3c"
+                        for val in filtered_data["Change"]
+                    ],
+                    "width": 2,
+                    "shape": "spline",
+                },
+                "marker": {
+                    "color": [
+                        "#2ecc71" if val >= 0 else "#e74c3c"
+                        for val in filtered_data["Change"]
+                    ],
+                    "size": 8,
+                },
+                "fill": "tozeroy",
+                "fillcolor": "rgba(46, 204, 113, 0.1)",
+            }
+        ],
+        "layout": {
+            "paper_bgcolor": "#fffdf5",
+            "plot_bgcolor": "#fffdf5",
+            "margin": {"l": 50, "r": 30, "t": 10, "b": 50},
+            "xaxis": {
+                "showgrid": False,
+                "zeroline": False,
+                "title": "",
+                "tickfont": {"size": 12, "color": "#555"},
+                "tickformat": "%b %d",  # Format as "Mar 09"
+                "tickangle": -45,
+            },
+            "yaxis": {
+                "showgrid": True,
+                "gridcolor": "#f0f0f0",
+                "zeroline": True,
+                "zerolinecolor": "#e0e0e0",
+                "title": "% Change",
+                "titlefont": {"size": 14, "color": "#555"},
+                "ticksuffix": "%",
+                "tickfont": {"size": 12, "color": "#555"},
+            },
+            "hovermode": "closest",
+            "hoverlabel": {
+                "bgcolor": "white",
+                "font": {"color": "#333"},
+                "bordercolor": "#ddd",
+            },
+        },
+    }
 
-def aggregate_monthly(df):
-    date_cols = [col for col in df.columns if col != "Region"]
-    monthly_data = {"January": {}, "February": {}, "March": {}}
-    for region in df["Region"]:
-        region_row = df[df["Region"] == region].iloc[0]
-        for month in monthly_data:
-            month_num = {"January": 1, "February": 2, "March": 3}[month]
-            month_values = []
-            for date in date_cols:
-                if datetime.strptime(f"2025-{date}", "%Y-%m/%d").month == month_num:
-                    # Clean the percentage value
-                    value = region_row[date]
-                    if isinstance(value, str):
-                        value = value.replace("%", "")
-                    month_values.append(float(value))
-            monthly_data[month][region] = (
-                round(sum(month_values) / len(month_values), 1) if month_values else 0
-            )
-    return monthly_data
+    return figure
 
-
-# Precompute data
-weekly_data = aggregate_weekly(df)
-week_labels = [f"Week {i+1}" for i in range(len(weekly_data["Global"]))]
-monthly_data = aggregate_monthly(df)
-month_labels = list(monthly_data.keys())
 
 # Layout
 app.layout = html.Div(
     [
         # Header
-        html.Img(
-            src="https://www.opentable.com/img/OpenTable-logo.svg",
-            style={"width": "150px", "display": "block", "margin": "0 auto"},
-        ),
-        html.H1(
-            "The restaurant industry, by the numbers",
-            style={"textAlign": "center", "color": "#333"},
-        ),
-        html.P(
-            "A snapshot of dining demand compared to 2024.",
-            style={"textAlign": "center"},
-        ),
-        # Dropdown
         html.Div(
             [
-                html.Label("View: "),
-                dcc.Dropdown(
-                    id="view-select",
-                    options=[
-                        {"label": "Daily", "value": "daily"},
-                        {"label": "Monthly", "value": "monthly"},
-                        {"label": "Weekly", "value": "weekly"},
+                html.Div(
+                    [
+                        html.Img(
+                            src="https://www.opentable.com/img/OpenTable-logo.svg",
+                            style={
+                                "width": "150px",
+                                "margin": "0 auto",
+                                "display": "block",
+                            },
+                        ),
+                        html.H1("Change in seated diners by week, 2025 vs. 2024"),
+                        html.P(
+                            "This graph measures the weekly change in seated diners from online reservations for 2025 vs. 2024. "
+                            "Hover over any given date to see how 2025 compares to the respective week in 2024. "
+                            "For example, in the US on the week ending on January 6, 2025, seated diners were up 25% compared to "
+                            "the respective week of the year in 2024."
+                        ),
                     ],
-                    value="daily",
-                    style={"width": "200px", "display": "inline-block"},
+                    className="container",
+                )
+            ],
+            className="header",
+        ),
+        # Main content
+        html.Div(
+            [
+                # Region dropdown
+                html.Div(
+                    [
+                        html.Label(
+                            "Global", style={"fontWeight": "600", "marginRight": "10px"}
+                        ),
+                        dcc.Dropdown(
+                            id="region-select",
+                            options=[
+                                {"label": region, "value": region} for region in regions
+                            ],
+                            value="Global",
+                            style={"width": "200px", "display": "inline-block"},
+                            clearable=False,
+                        ),
+                    ],
+                    className="dropdown-container",
+                ),
+                # Chart container
+                html.Div(
+                    [
+                        # Legend
+                        html.Div(
+                            [
+                                html.Div(
+                                    [
+                                        html.Div(
+                                            style={
+                                                "width": "30px",
+                                                "height": "4px",
+                                                "backgroundColor": "#e74c3c",
+                                                "marginRight": "8px",
+                                            }
+                                        ),
+                                        html.Div(
+                                            "Decline",
+                                            style={
+                                                "fontSize": "0.9em",
+                                                "color": "#555",
+                                            },
+                                        ),
+                                    ],
+                                    style={
+                                        "display": "flex",
+                                        "alignItems": "center",
+                                        "marginLeft": "20px",
+                                    },
+                                ),
+                                html.Div(
+                                    [
+                                        html.Div(
+                                            style={
+                                                "width": "30px",
+                                                "height": "4px",
+                                                "backgroundColor": "#2ecc71",
+                                                "marginRight": "8px",
+                                            }
+                                        ),
+                                        html.Div(
+                                            "Growth",
+                                            style={
+                                                "fontSize": "0.9em",
+                                                "color": "#555",
+                                            },
+                                        ),
+                                    ],
+                                    style={
+                                        "display": "flex",
+                                        "alignItems": "center",
+                                        "marginLeft": "20px",
+                                    },
+                                ),
+                                html.Div(
+                                    [
+                                        html.Div(
+                                            "2025 vs. 2024",
+                                            style={
+                                                "fontSize": "0.9em",
+                                                "color": "#555",
+                                            },
+                                        )
+                                    ],
+                                    style={
+                                        "display": "flex",
+                                        "alignItems": "center",
+                                        "marginLeft": "20px",
+                                    },
+                                ),
+                            ],
+                            style={
+                                "display": "flex",
+                                "alignItems": "center",
+                                "justifyContent": "flex-end",
+                                "marginBottom": "15px",
+                            },
+                        ),
+                        # Chart
+                        dcc.Graph(
+                            id="weekly-chart",
+                            figure=create_figure(plot_df, "Global"),
+                            config={"displayModeBar": False},
+                            style={"height": "400px"},
+                        ),
+                        # Table (hidden by default)
+                        html.Div(id="table-container", style={"display": "none"}),
+                    ],
+                    className="chart-container",
                 ),
             ],
-            style={"textAlign": "right", "marginBottom": "20px"},
+            className="container",
         ),
-        # Content
-        html.Div(id="content"),
-    ],
-    style={
-        "fontFamily": "Arial, sans-serif",
-        "padding": "20px",
-        "backgroundColor": "#f5f5f5",
-    },
+    ]
 )
 
 
-# Callback to update content based on dropdown
-@app.callback(Output("content", "children"), Input("view-select", "value"))
-def update_content(view):
-    if view == "daily":
-        return [
-            html.H2("Change in seated diners by day, 2025 vs. 2024"),
-            dash_table.DataTable(
-                columns=[{"name": "MONTH/DAY", "id": "Region"}]
-                + [{"name": col, "id": col} for col in df.columns[1:]],
-                data=df.to_dict("records"),
-                style_table={"overflowX": "auto"},
-                style_cell={
-                    "textAlign": "center",
-                    "padding": "10px",
-                    "border": "1px solid #ddd",
-                },
-                style_header={"backgroundColor": "#f8f8f8", "fontWeight": "bold"},
-            ),
-        ]
-    elif view == "monthly":
-        monthly_df = pd.DataFrame(monthly_data, index=df["Region"]).reset_index()
-        return [
-            html.H2("Change in seated diners by month, 2025 vs. 2024"),
-            dash_table.DataTable(
-                columns=[{"name": "MONTH", "id": "Region"}]
-                + [{"name": month, "id": month} for month in month_labels],
-                data=monthly_df.to_dict("records"),
-                style_table={"overflowX": "auto"},
-                style_cell={
-                    "textAlign": "center",
-                    "padding": "10px",
-                    "border": "1px solid #ddd",
-                },
-                style_header={"backgroundColor": "#f8f8f8", "fontWeight": "bold"},
-            ),
-        ]
-    elif view == "weekly":
-        return [
-            html.H2("Change in seated diners by week, 2025 vs. 2024"),
-            dcc.Graph(
-                figure={
-                    "data": [
-                        {
-                            "x": week_labels,
-                            "y": weekly_data[region],
-                            "type": "line",
-                            "name": region,
-                        }
-                        for region in weekly_data
-                    ],
-                    "layout": {
-                        "yaxis": {"title": "% Change"},
-                        "margin": {"l": 50, "r": 50, "t": 50, "b": 50},
-                    },
-                }
-            ),
-        ]
+# Callback to update chart based on region selection
+@app.callback(Output("weekly-chart", "figure"), Input("region-select", "value"))
+def update_chart(selected_region):
+    return create_figure(plot_df, selected_region)
 
-
-# Footer (optional, added outside callback for simplicity)
-app.layout.children.append(
-    html.Footer(
-        [
-            html.P("© 2025 OpenTable, Inc. All rights reserved."),
-            html.P("Data provided by OpenTable. Cite and link back if used."),
-        ],
-        style={
-            "textAlign": "center",
-            "marginTop": "40px",
-            "fontSize": "0.9em",
-            "color": "#666",
-        },
-    )
-)
 
 if __name__ == "__main__":
     app.run_server(debug=True)

@@ -3,99 +3,373 @@
   <head>
     <meta charset="UTF-8" />
     <title>State of the Restaurant Industry</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
       body {
-        font-family: Arial, sans-serif;
+        font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
         margin: 0;
-        padding: 20px;
-        background-color: #f5f5f5;
+        padding: 0;
+        background-color: #fff;
+        color: #333;
+        line-height: 1.5;
       }
       header {
-        text-align: center;
-        padding: 20px;
+        text-align: left;
+        padding: 40px 20px;
+        border-bottom: 1px solid #eaeaea;
       }
       h1 {
-        font-size: 2em;
+        font-size: 2.5em;
         color: #333;
+        margin-bottom: 10px;
+        font-weight: 600;
+      }
+      h2 {
+        font-size: 1.8em;
+        margin-top: 30px;
+        margin-bottom: 20px;
+        font-weight: 600;
+      }
+      p {
+        font-size: 0.9em;
+        color: #555;
       }
       .container {
         max-width: 1200px;
         margin: 0 auto;
+        padding: 0 20px;
+      }
+      .dropdown {
+        margin: 30px 0;
+        text-align: left;
+      }
+      .dropdown select {
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 1em;
+        background-color: #fff;
+      }
+      .dropdown label {
+        font-weight: 600;
+        margin-right: 10px;
+      }
+      .chart-container {
+        background-color: #fffdf5;
+        border-radius: 8px;
+        padding: 30px;
+        margin-top: 20px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      }
+      .legend {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        margin-bottom: 15px;
+      }
+      .legend-item {
+        display: flex;
+        align-items: center;
+        margin-left: 20px;
+      }
+      .legend-color {
+        width: 30px;
+        height: 4px;
+        margin-right: 8px;
+      }
+      .legend-label {
+        font-size: 0.9em;
+        color: #555;
       }
       table {
         width: 100%;
         border-collapse: collapse;
         margin-top: 20px;
+        background-color: #fffdf5;
+        border-radius: 8px;
+        overflow: hidden;
       }
       th,
       td {
-        padding: 10px;
+        padding: 12px 15px;
         text-align: center;
-        border: 1px solid #ddd;
+        border-bottom: 1px solid #eaeaea;
       }
       th {
-        background-color: #f8f8f8;
-        font-weight: bold;
+        background-color: #fffdf5;
+        font-weight: 600;
+        color: #333;
+        border-bottom: 2px solid #eaeaea;
       }
       td {
-        background-color: #fff;
+        background-color: #fffdf5;
+      }
+      #chartContainer {
+        height: 400px;
+        margin-bottom: 30px;
       }
       footer {
         text-align: center;
-        margin-top: 40px;
+        margin-top: 60px;
+        padding: 30px 0;
         font-size: 0.9em;
-        color: #666;
+        color: #777;
+        border-top: 1px solid #eaeaea;
       }
     </style>
   </head>
   <body>
     <header>
-      <img
-        src="https://www.opentable.com/img/OpenTable-logo.svg"
-        alt="OpenTable Logo"
-        style="width: 150px"
-      />
-      <h1>The restaurant industry, by the numbers</h1>
-      <p>A snapshot of dining demand compared to 2024.</p>
+      <div class="container">
+        <img
+          src="https://www.opentable.com/img/OpenTable-logo.svg"
+          alt="OpenTable Logo"
+          style="width: 150px"
+        />
+        <h1>Change in seated diners by week, 2025 vs. 2024</h1>
+        <p>
+          This graph measures the weekly change in seated diners from online
+          reservations for 2025 vs. 2024. Hover over any given date to see how
+          2025 compares to the respective week in 2024. For example, in the US
+          on the week ending on January 6, 2025, seated diners were up 25%
+          compared to the respective week of the year in 2024.
+        </p>
+      </div>
     </header>
     <div class="container">
-      <h2>Change in seated diners by month / day, 2025 vs. 2024</h2>
-      <table id="dinersTable">
-        <thead>
-          <tr id="headerRow"></tr>
-        </thead>
-        <tbody id="dataRows"></tbody>
-      </table>
+      <div class="dropdown">
+        <label for="regionSelect">Global</label>
+        <select id="regionSelect">
+          <option value="global">Global</option>
+          <option value="us">United States</option>
+          <option value="canada">Canada</option>
+          <option value="uk">United Kingdom</option>
+          <option value="australia">Australia</option>
+        </select>
+      </div>
+
+      <div class="chart-container">
+        <div class="legend">
+          <div class="legend-item">
+            <div class="legend-color" style="background-color: #e74c3c"></div>
+            <div class="legend-label">Decline</div>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color" style="background-color: #2ecc71"></div>
+            <div class="legend-label">Growth</div>
+          </div>
+          <div class="legend-item">
+            <div class="legend-label">2025 vs. 2024</div>
+          </div>
+        </div>
+
+        <div id="chartContainer">
+          <canvas id="weeklyChart"></canvas>
+        </div>
+
+        <table id="dinersTable">
+          <thead>
+            <tr id="headerRow"></tr>
+          </thead>
+          <tbody id="dataRows"></tbody>
+        </table>
+      </div>
     </div>
     <footer>
-      <p>© 2025 OpenTable, Inc. All rights reserved.</p>
-      <p>Data provided by OpenTable. Cite and link back if used.</p>
+      <div class="container">
+        <p>© 2025 OpenTable, Inc. All rights reserved.</p>
+        <p>Data provided by OpenTable. Cite and link back if used.</p>
+      </div>
     </footer>
 
     <script>
-      fetch("/data")
-        .then((response) => response.json())
-        .then((data) => {
-          // Populate table headers (dates)
-          const headerRow = document.getElementById("headerRow");
-          headerRow.innerHTML =
-            "<th>MONTH/DAY</th>" +
-            data.dates.map((date) => `<th>${date}</th>`).join("");
+      // Load Chart.js
+      document.addEventListener("DOMContentLoaded", function () {
+        // Create a chart
+        const ctx = document.getElementById("weeklyChart").getContext("2d");
+        let chart; // Define chart variable in wider scope
 
-          // Populate table rows (regions and values)
-          const dataRows = document.getElementById("dataRows");
-          data.regions.forEach((region) => {
-            const row = document.createElement("tr");
-            const regionName = Object.keys(region)[0]; // Assuming first key is region name
-            row.innerHTML =
-              `<td>${region[regionName]}</td>` +
-              data.dates
-                .map((date) => `<td>${region[date] || "-"}</td>`)
-                .join("");
-            dataRows.appendChild(row);
+        // Create gradients for the chart
+        const declineGradient = ctx.createLinearGradient(0, 0, 0, 400);
+        declineGradient.addColorStop(0, "rgba(231, 76, 60, 0.8)");
+        declineGradient.addColorStop(1, "rgba(231, 76, 60, 0.1)");
+
+        const growthGradient = ctx.createLinearGradient(0, 0, 0, 400);
+        growthGradient.addColorStop(0, "rgba(46, 204, 113, 0.8)");
+        growthGradient.addColorStop(1, "rgba(46, 204, 113, 0.1)");
+
+        // Fetch data
+        fetch("/data")
+          .then((response) => response.json())
+          .then((data) => {
+            // Populate table headers (dates)
+            const headerRow = document.getElementById("headerRow");
+            headerRow.innerHTML =
+              "<th>MONTH/DAY</th>" +
+              data.dates.map((date) => `<th>${date}</th>`).join("");
+
+            // Populate table rows (regions and values)
+            const dataRows = document.getElementById("dataRows");
+            data.regions.forEach((region) => {
+              const row = document.createElement("tr");
+              const regionName = region.Region; // Get the region name
+              row.innerHTML =
+                `<td>${regionName}</td>` +
+                data.dates.map((date) => `<td>${region[date]}%</td>`).join("");
+              dataRows.appendChild(row);
+            });
+
+            // Hide table and show chart by default
+            document.getElementById("dinersTable").style.display = "none";
+
+            // Process data for all regions
+            const weeklyData = {};
+            const weekLabels = data.dates;
+
+            // Extract data for each region
+            data.regions.forEach((region) => {
+              const regionName = region.Region;
+              weeklyData[regionName] = data.dates.map((date) => region[date]);
+            });
+
+            // Set default region
+            const defaultRegion = "Global";
+
+            // Create chart with initial data
+            chart = createChart(
+              defaultRegion,
+              weeklyData[defaultRegion],
+              weekLabels
+            );
+
+            // Add event listener to dropdown
+            const regionSelect = document.getElementById("regionSelect");
+
+            // Populate dropdown with available regions
+            regionSelect.innerHTML = "";
+            Object.keys(weeklyData).forEach((region) => {
+              const option = document.createElement("option");
+              option.value = region.toLowerCase().replace(/\s+/g, "");
+              option.textContent = region;
+              regionSelect.appendChild(option);
+            });
+
+            // Set default selection
+            regionSelect.value = defaultRegion
+              .toLowerCase()
+              .replace(/\s+/g, "");
+
+            // Add change event listener
+            regionSelect.addEventListener("change", function () {
+              const selectedRegionValue = this.value;
+              // Find the matching region name (case-insensitive)
+              const selectedRegion = Object.keys(weeklyData).find(
+                (region) =>
+                  region.toLowerCase().replace(/\s+/g, "") ===
+                  selectedRegionValue
+              );
+
+              if (selectedRegion && weeklyData[selectedRegion]) {
+                // Update chart with selected region data
+                updateChart(chart, selectedRegion, weeklyData[selectedRegion]);
+              }
+            });
+          })
+          .catch((error) => console.error("Error fetching data:", error));
+
+        // Function to create chart
+        function createChart(regionName, regionData, labels) {
+          return new Chart(ctx, {
+            type: "line",
+            data: {
+              labels: labels,
+              datasets: [
+                {
+                  label: regionName,
+                  data: regionData,
+                  borderColor: regionData.map((value) =>
+                    value >= 0 ? "#2ecc71" : "#e74c3c"
+                  ),
+                  backgroundColor: regionData.map((value) =>
+                    value >= 0 ? growthGradient : declineGradient
+                  ),
+                  borderWidth: 2,
+                  pointRadius: 3,
+                  pointBackgroundColor: regionData.map((value) =>
+                    value >= 0 ? "#2ecc71" : "#e74c3c"
+                  ),
+                  fill: false,
+                  tension: 0.4,
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                y: {
+                  grid: {
+                    color: "#f0f0f0",
+                  },
+                  ticks: {
+                    callback: function (value) {
+                      return value + "%";
+                    },
+                  },
+                  title: {
+                    display: true,
+                    text: "% Change",
+                    font: {
+                      size: 14,
+                      weight: "normal",
+                    },
+                  },
+                },
+                x: {
+                  grid: {
+                    display: false,
+                  },
+                },
+              },
+              plugins: {
+                legend: {
+                  display: false,
+                },
+                tooltip: {
+                  backgroundColor: "rgba(255, 255, 255, 0.9)",
+                  titleColor: "#333",
+                  bodyColor: "#333",
+                  borderColor: "#ddd",
+                  borderWidth: 1,
+                  padding: 10,
+                  displayColors: false,
+                  callbacks: {
+                    label: function (context) {
+                      return context.dataset.label + ": " + context.raw + "%";
+                    },
+                  },
+                },
+              },
+            },
           });
-        })
-        .catch((error) => console.error("Error fetching data:", error));
+        }
+
+        // Function to update chart with new data
+        function updateChart(chart, regionName, regionData) {
+          chart.data.datasets[0].label = regionName;
+          chart.data.datasets[0].data = regionData;
+          chart.data.datasets[0].borderColor = regionData.map((value) =>
+            value >= 0 ? "#2ecc71" : "#e74c3c"
+          );
+          chart.data.datasets[0].backgroundColor = regionData.map((value) =>
+            value >= 0 ? growthGradient : declineGradient
+          );
+          chart.data.datasets[0].pointBackgroundColor = regionData.map(
+            (value) => (value >= 0 ? "#2ecc71" : "#e74c3c")
+          );
+          chart.update();
+        }
+      });
     </script>
   </body>
 </html>
