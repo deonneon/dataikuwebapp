@@ -38,7 +38,6 @@ app.index_string = """
             .header {
                 text-align: left;
                 padding: 40px 20px;
-                border-bottom: 1px solid #eaeaea;
             }
             .header h1 {
                 font-size: 2.5em;
@@ -94,7 +93,6 @@ app.index_string = """
                 padding: 30px 0;
                 font-size: 0.9em;
                 color: #777;
-                border-top: 1px solid #eaeaea;
             }
         </style>
         {%scripts%}
@@ -214,14 +212,6 @@ app.layout = html.Div(
             [
                 html.Div(
                     [
-                        html.Img(
-                            src="https://www.ExampleDash.com/img/ExampleDash-logo.svg",
-                            style={
-                                "width": "150px",
-                                "margin": "0 auto",
-                                "display": "block",
-                            },
-                        ),
                         html.H1("Change in seated diners by week, 2025 vs. 2024"),
                         html.P(
                             "This graph measures the weekly change in seated diners from online reservations for 2025 vs. 2024. "
