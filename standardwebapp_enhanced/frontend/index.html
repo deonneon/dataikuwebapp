@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>State of the Restaurant Industry</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background-color: #f5f5f5;
+      }
+      header {
+        text-align: center;
+        padding: 20px;
+      }
+      h1 {
+        font-size: 2em;
+        color: #333;
+      }
+      h2 {
+        font-size: 1.5em;
+        margin-top: 30px;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      .dropdown {
+        margin-bottom: 20px;
+        text-align: right;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+        display: none; /* Hidden by default, shown based on dropdown */
+      }
+      th,
+      td {
+        padding: 10px;
+        text-align: center;
+        border: 1px solid #ddd;
+      }
+      th {
+        background-color: #f8f8f8;
+        font-weight: bold;
+      }
+      td {
+        background-color: #fff;
+      }
+      #weeklyChartContainer {
+        display: none; /* Hidden by default */
+      }
+      footer {
+        text-align: center;
+        margin-top: 40px;
+        font-size: 0.9em;
+        color: #666;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <img
+        src="https://www.opentable.com/img/OpenTable-logo.svg"
+        alt="OpenTable Logo"
+        style="width: 150px"
+      />
+      <h1>The restaurant industry, by the numbers</h1>
+      <p>A snapshot of dining demand compared to 2024.</p>
+    </header>
+    <div class="container">
+      <div class="dropdown">
+        <label for="viewSelect">View: </label>
+        <select id="viewSelect">
+          <option value="daily">Daily</option>
+          <option value="monthly">Monthly</option>
+          <option value="weekly">Weekly</option>
+        </select>
+      </div>
+
+      <h2 id="tableTitle">Change in seated diners by day, 2025 vs. 2024</h2>
+      <table id="dinersTable">
+        <thead>
+          <tr id="headerRow"></tr>
+        </thead>
+        <tbody id="dataRows"></tbody>
+      </table>
+
+      <h2 id="chartTitle" style="display: none">
+        Change in seated diners by week, 2025 vs. 2024
+      </h2>
+      <div id="weeklyChartContainer">
+        <canvas id="weeklyChart"></canvas>
+      </div>
+    </div>
+    <footer>
+      <p>© 2025 OpenTable, Inc. All rights reserved.</p>
+      <p>Data provided by OpenTable. Cite and link back if used.</p>
+    </footer>
+
+    <script>
+      let chartInstance = null;
+
+      fetch("/data")
+        .then((response) => response.json())
+        .then((data) => {
+          const dailyData = data.daily;
+          const weeklyData = data.weekly;
+          const monthlyData = data.monthly;
+
+          // Populate daily/monthly table
+          function populateTable(view = "daily") {
+            const headerRow = document.getElementById("headerRow");
+            const dataRows = document.getElementById("dataRows");
+            dataRows.innerHTML = "";
+            if (view === "daily") {
+              headerRow.innerHTML =
+                "<th>MONTH/DAY</th>" +
+                dailyData.dates.map((date) => `<th>${date}</th>`).join("");
+              dailyData.regions.forEach((region) => {
+                const row = document.createElement("tr");
+                const regionName = region["Region"];
+                row.innerHTML =
+                  `<td>${regionName}</td>` +
+                  dailyData.dates
+                    .map((date) => `<td>${region[date] || "-"}</td>`)
+                    .join("");
+                dataRows.appendChild(row);
+              });
+            } else if (view === "monthly") {
+              headerRow.innerHTML =
+                "<th>MONTH</th>" +
+                monthlyData.labels.map((month) => `<th>${month}</th>`).join("");
+              Object.keys(monthlyData.data["January"]).forEach((region) => {
+                const row = document.createElement("tr");
+                row.innerHTML =
+                  `<td>${region}</td>` +
+                  monthlyData.labels
+                    .map(
+                      (month) => `<td>${monthlyData.data[month][region]}%</td>`
+                    )
+                    .join("");
+                dataRows.appendChild(row);
+              });
+            }
+          }
+
+          // Populate weekly chart (unchanged)
+          function populateChart() {
+            const ctx = document.getElementById("weeklyChart").getContext("2d");
+            if (chartInstance) chartInstance.destroy();
+            chartInstance = new Chart(ctx, {
+              type: "line",
+              data: {
+                labels: weeklyData.labels,
+                datasets: Object.keys(weeklyData.data).map((region) => ({
+                  label: region,
+                  data: weeklyData.data[region],
+                  borderColor: getRandomColor(),
+                  fill: false,
+                })),
+              },
+              options: {
+                scales: {
+                  y: { title: { display: true, text: "% Change" } },
+                },
+              },
+            });
+          }
+
+          // Dropdown logic (unchanged except title text)
+          viewSelect.addEventListener("change", () => {
+            const view = viewSelect.value;
+            if (view === "weekly") {
+              table.style.display = "none";
+              chartContainer.style.display = "block";
+              tableTitle.style.display = "none";
+              chartTitle.style.display = "block";
+              populateChart();
+            } else {
+              table.style.display = "table";
+              chartContainer.style.display = "none";
+              tableTitle.style.display = "block";
+              chartTitle.style.display = "none";
+              tableTitle.textContent = `Change in seated diners by ${view}, 2025 vs. 2024`;
+              populateTable(view);
+            }
+          });
+
+          // Initial load
+          populateTable();
+        });
+    </script>
+  </body>
+</html>
