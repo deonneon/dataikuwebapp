@@ -35,7 +35,7 @@
         width: 100%;
         border-collapse: collapse;
         margin-top: 20px;
-        display: none; /* Hidden by default, shown based on dropdown */
+        display: table; /* Changed from 'none' to 'table' to show by default */
       }
       th,
       td {
@@ -111,6 +111,15 @@
           const weeklyData = data.weekly;
           const monthlyData = data.monthly;
 
+          // Get DOM elements
+          const viewSelect = document.getElementById("viewSelect");
+          const table = document.getElementById("dinersTable");
+          const chartContainer = document.getElementById(
+            "weeklyChartContainer"
+          );
+          const tableTitle = document.getElementById("tableTitle");
+          const chartTitle = document.getElementById("chartTitle");
+
           // Populate daily/monthly table
           function populateTable(view = "daily") {
             const headerRow = document.getElementById("headerRow");
@@ -148,7 +157,7 @@
             }
           }
 
-          // Populate weekly chart (unchanged)
+          // Populate weekly chart
           function populateChart() {
             const ctx = document.getElementById("weeklyChart").getContext("2d");
             if (chartInstance) chartInstance.destroy();
@@ -156,7 +165,7 @@
               type: "line",
               data: {
                 labels: weeklyData.labels,
-                datasets: Object.keys(weeklyData.data).map((region) => ({
+                datasets: Object.keys(weeklyData.data).map((region, index) => ({
                   label: region,
                   data: weeklyData.data[region],
                   borderColor: getRandomColor(),
@@ -171,7 +180,17 @@
             });
           }
 
-          // Dropdown logic (unchanged except title text)
+          // Helper function for random colors
+          function getRandomColor() {
+            const letters = "0123456789ABCDEF";
+            let color = "#";
+            for (let i = 0; i < 6; i++) {
+              color += letters[Math.floor(Math.random() * 16)];
+            }
+            return color;
+          }
+
+          // Dropdown logic
           viewSelect.addEventListener("change", () => {
             const view = viewSelect.value;
             if (view === "weekly") {
@@ -192,6 +211,7 @@
 
           // Initial load
           populateTable();
+          table.style.display = "table"; // Explicitly set table to display
         });
     </script>
   </body>

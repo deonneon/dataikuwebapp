@@ -4,6 +4,7 @@ from dash import dcc, html, dash_table
 import plotly.express as px
 import pandas as pd
 from flask import Flask
+from datetime import datetime
 
 # Flask server for Dataiku
 server = Flask(__name__)
@@ -27,6 +28,12 @@ weekly_df.columns = ["Region"] + [
     pd.to_datetime(d, format="%m/%d").strftime("%Y-%m-%d") for d in dates
 ]
 weekly_df = weekly_df.melt(id_vars=["Region"], var_name="Date", value_name="Change")
+
+# Clean the "Change" column to ensure it contains numeric values
+weekly_df["Change"] = (
+    weekly_df["Change"].str.replace("%", "", regex=False).astype(float)
+)
+
 weekly_df["Week"] = pd.to_datetime(weekly_df["Date"]).dt.strftime("%Y-W%U")
 weekly_data = weekly_df.groupby(["Region", "Week"])["Change"].mean().reset_index()
 

@@ -1,4 +1,4 @@
-import dataiku
+# import dataiku
 from flask import Flask, render_template, jsonify
 import pandas as pd
 from datetime import datetime, timedelta
@@ -17,12 +17,20 @@ def aggregate_weekly(df):
         for date in date_cols:
             current_date = datetime.strptime(f"2025-{date}", "%Y-%m/%d")
             if current_date < week_start + timedelta(days=7):
-                week_values.append(float(region_row[date].replace("%", "")))
+                # Clean the percentage value
+                value = region_row[date]
+                if isinstance(value, str):
+                    value = value.replace("%", "")
+                week_values.append(float(value))
             else:
                 weekly_data[region].append(
                     round(sum(week_values) / len(week_values), 1)
                 )
-                week_values = [float(region_row[date].replace("%", ""))]
+                # Clean the percentage value
+                value = region_row[date]
+                if isinstance(value, str):
+                    value = value.replace("%", "")
+                week_values = [float(value)]
                 week_start += timedelta(days=7)
         if week_values:
             weekly_data[region].append(round(sum(week_values) / len(week_values), 1))
@@ -36,11 +44,14 @@ def aggregate_monthly(df):
         region_row = df[df["Region"] == region].iloc[0]
         for month in monthly_data:
             month_num = {"January": 1, "February": 2, "March": 3}[month]
-            month_values = [
-                float(region_row[date].replace("%", ""))
-                for date in date_cols
-                if datetime.strptime(f"2025-{date}", "%Y-%m/%d").month == month_num
-            ]
+            month_values = []
+            for date in date_cols:
+                if datetime.strptime(f"2025-{date}", "%Y-%m/%d").month == month_num:
+                    # Clean the percentage value
+                    value = region_row[date]
+                    if isinstance(value, str):
+                        value = value.replace("%", "")
+                    month_values.append(float(value))
             monthly_data[month][region] = (
                 round(sum(month_values) / len(month_values), 1) if month_values else 0
             )
@@ -54,8 +65,9 @@ def index():
 
 @app.route("/data")
 def get_data():
-    dataset = dataiku.Dataset("seated_diners_2025_vs_2024")
-    df = dataset.get_dataframe()
+    # dataset = dataiku.Dataset("seated_diners_2025_vs_2024")
+    # df = dataset.get_dataframe()
+    df = pd.read_csv("data.csv")
 
     # Daily data
     daily_data = {
